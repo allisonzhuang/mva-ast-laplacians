@@ -8,10 +8,7 @@ def _parse_stocks(data, period, pred_days):
     series = []
     outcomes = []
 
-    for i in range(N):
-        if i + period + pred_days >= N:
-            continue
-
+    for i in range(N - period - pred_days):
         series.append(data[i : i + period])
 
         outcome = np.sign(data[i + period + pred_days] - data[i + period])
@@ -32,11 +29,11 @@ def load_dataset(dataset_name: str, split_data=False, **kwargs):
     elif dataset_name == "japanese":
         X, y = load_classification("JapaneseVowels")
     elif dataset_name == "microsoft":
-        data = np.genfromtxt("MSFT.csv", delimiter=",", skip_header=1, usecols=[1])
-        X, y = _parse_stocks(data, kwargs.get("period", 20), kwargs.get("pred_days", 3))
+        data = np.genfromtxt("data/MSFT.csv", delimiter=",", skip_header=1, usecols=[1])
+        X, y = _parse_stocks(data, kwargs.get("period", 60), kwargs.get("pred_days", 6))
     elif dataset_name == "amazon":
-        data = np.genfromtxt("AMZN.csv", delimiter=",", skip_header=1, usecols=[1])
-        X, y = _parse_stocks(data, kwargs.get("period", 20), kwargs.get("pred_days", 3))
+        data = np.genfromtxt("data/AMZN.csv", delimiter=",", skip_header=1, usecols=[1])
+        X, y = _parse_stocks(data, kwargs.get("period", 60), kwargs.get("pred_days", 6))
     else:
         raise ValueError(f"Unknown dataset: {dataset_name}.")
 
