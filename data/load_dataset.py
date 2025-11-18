@@ -8,7 +8,7 @@ def _parse_stocks(data, period, pred_days):
     series = []
     outcomes = []
 
-    for i in range(0, N, period):
+    for i in range(N):
         if i + period + pred_days >= N:
             continue
 
