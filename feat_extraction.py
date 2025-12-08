@@ -110,7 +110,7 @@ def get_autocorr_features(X, n_lags=60, fs=2000):
     return np.array(all_features)
 
 
-def get_features(X, fs=2000, n_fourier_bins=50, n_lags=60):
+def get_features(X, fs=2000, n_fourier_bins=50, n_lags=60, **kwargs):
     """
     X: matrix of time series (N, T)
     Returns: matrix of features (N, F)

@@ -24,8 +24,10 @@ def fisher_selector(X, y):
         class_means[i] = X_i.mean(axis=0)
         class_vars[i] = X_i.var(axis=0, ddof=1)
 
-    F = (counts[:, None] * (class_means - global_mean) ** 2).sum(axis=0) / (counts[:, None] * class_vars).sum(axis=0)
+    numerator = (counts[:, None] * (class_means - global_mean) ** 2).sum(axis=0)
+    denominator = (counts[:, None] * class_vars).sum(axis=0)
 
+    F = np.divide(numerator, denominator, out=np.zeros_like(numerator), where=(denominator != 0))
     return F
 
 

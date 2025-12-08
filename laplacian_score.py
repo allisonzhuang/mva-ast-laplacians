@@ -75,8 +75,13 @@ def fisher_laplacian_score(X, X_f, y):
     return laplacian_score(X_f, distance_matrix, similarity_matrix)
 
 
-def dtw_laplacian_score(X, X_f, k, t, sakoe_chiba=10):
-    distance_matrix = cdist_dtw(X, global_constraint="sakoe_chiba", sakoe_chiba_radius=sakoe_chiba, n_jobs=-1)
+def dtw_laplacian_score(X, X_f, k, t, distance_matrix_path="dist_matrix.npy"):
+    try:
+        distance_matrix = np.load(distance_matrix_path)
+    except FileNotFoundError:
+        distance_matrix = cdist_dtw(X, n_jobs=4)
+        np.save(distance_matrix_path, distance_matrix)
+
     similarity_matrix = np.exp(-distance_matrix / t)
 
     return laplacian_score(X_f, distance_matrix, similarity_matrix, k)
@@ -100,8 +105,13 @@ def get_lb_matrix(X, radius):
     return np.maximum(lb_matrix, lb_matrix.T)
 
 
-def lb_dtw_laplacian_score(X, X_f, k, t, sakoe_chiba=10):
-    distance_matrix = get_lb_matrix(X, sakoe_chiba)
+def lb_dtw_laplacian_score(X, X_f, k, t, distance_matrix_path="dist_matrix.npy"):
+    try:
+        distance_matrix = np.load(distance_matrix_path)
+    except FileNotFoundError:
+        distance_matrix = get_lb_matrix(X, 30)
+        np.save(distance_matrix_path, distance_matrix)
+
     similarity_matrix = np.exp(-distance_matrix / t)
 
     return laplacian_score(X_f, distance_matrix, similarity_matrix, k)
