@@ -1,6 +1,16 @@
 import numpy as np
-from sklearn.model_selection import train_test_split
-from aeon.datasets import load_classification
+from sklearn.decomposition import DictionaryLearning
+
+
+def denoise_data(signals, n_atoms=50, sparsity=0.0):
+    dict_learning = DictionaryLearning(n_atoms, alpha=sparsity, max_iter=100)
+
+    V = dict_learning.fit_transform(signals)
+    D = dict_learning.components_
+
+    X_hat = V @ D
+
+    return X_hat
 
 
 def _parse_stocks(data, period=60, pred_days=7, shift_days=1, **kwargs):
@@ -20,23 +30,46 @@ def _parse_stocks(data, period=60, pred_days=7, shift_days=1, **kwargs):
     return X, y
 
 
-def load_dataset(dataset_name: str, split_data=False, **kwargs):
+def load_dataset(dataset_name: str, denoise=True, raw=False, **kwargs):
     dataset_name = dataset_name.lower()
 
     if dataset_name == "heartbeat":
+        from aeon.datasets import load_classification
         X, y = load_classification("AbnormalHeartbeat")
-        X = X.reshape(X.shape[0], X.shape[2])  # If we can handle multi-dimensional, remove this
-    elif dataset_name == "japanese":
-        X, y = load_classification("JapaneseVowels")
+
+        if not raw:
+            X = X.reshape(
+                X.shape[0], X.shape[2]
+            )  # If we can handle multi-dimensional, remove this
+
+        if denoise:
+            X = denoise_data(X, n_atoms=100, sparsity=0.5)
     elif dataset_name == "microsoft":
-        data = np.genfromtxt("data/MSFT.csv", delimiter=",", skip_header=1, usecols=[1])
-        X, y = _parse_stocks(data, **kwargs)
+        data = np.genfromtxt(
+            "data/MSFT.csv", delimiter=",", skip_header=1, usecols=[1]
+        )
+
+        X, y = data, None
+
+        if not raw:
+            X, y = _parse_stocks(data, **kwargs)
+
+        if denoise:
+            X = denoise_data(X)
+
     elif dataset_name == "amazon":
-        data = np.genfromtxt("data/AMZN.csv", delimiter=",", skip_header=1, usecols=[1])
-        X, y = _parse_stocks(data, **kwargs)
+        data = np.genfromtxt(
+            "data/AMZN.csv", delimiter=",", skip_header=1, usecols=[1]
+        )
+
+        X, y = data, None
+
+        if not raw:
+            X, y = _parse_stocks(data, **kwargs)
+
+        if denoise:
+            X = denoise_data(X)
     else:
         raise ValueError(f"Unknown dataset: {dataset_name}.")
 
-    if split_data:
-        return train_test_split(X, y, test_size=0.2)
     return X, y

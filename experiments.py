@@ -1,4 +1,5 @@
 from sklearn.model_selection import train_test_split
+from matplotlib import pyplot as plt
 
 from data import load_dataset
 from feat_extraction import get_features
@@ -7,12 +8,16 @@ from laplacian_score import dtw_laplacian_score, lb_dtw_laplacian_score
 
 
 class Experiment:
-    def __init__(self, dataset: str, k: int, t: float, desc: str = "", **kwargs):
+    def __init__(self, dataset: str, denoise: bool = True, k: int = 3, t: float = 1.0, desc: str = "", **kwargs):
         self.dataset = dataset
         self.desc = desc
 
         self.k = k
         self.t = t
+
+        self.pre_dtw_filename = ""
+        if not denoise:
+            self.pre_dtw_filename = "raw_"
 
         self.kwargs = kwargs
 
@@ -21,8 +26,8 @@ class Experiment:
 
         self.scores["pca"] = pca_selector(self.X_f)
         self.scores["fisher"] = fisher_selector(self.X_f, self.y)
-        self.scores["dtw"] = dtw_laplacian_score(self.X, self.X_f, self.k, self.t, f"dtw/dtw_{self.dataset}.npy")
-        self.scores["lb_dtw"] = lb_dtw_laplacian_score(self.X, self.X_f, self.k, self.t, f"dtw/lb_dtw_{self.dataset}.npy")
+        self.scores["dtw"] = dtw_laplacian_score(self.X, self.X_f, self.k, self.t, f"dtw/{self.pre_dtw_filename}dtw_{self.dataset}.npy")
+        self.scores["lb_dtw"] = lb_dtw_laplacian_score(self.X, self.X_f, self.k, self.t, f"dtw/{self.pre_dtw_filename}lb_dtw_{self.dataset}.npy")
 
         print("Scores extracted.")
 
@@ -49,3 +54,26 @@ class Experiment:
                 metrics[filter_method].append(clf.score(X_test[:, feat_idx], y_test))
 
         return metrics
+
+
+def plot_experiment(exp: dict):
+    desc, r_list, metrics = exp["desc"], exp["r_list"], exp["metrics"]
+
+    all_feats = metrics["all_feats"]
+
+    pca = metrics["pca"]
+    fisher = metrics["fisher"]
+    dtw = metrics["dtw"]
+    lb_dtw = metrics["lb_dtw"]
+
+    plt.plot(r_list, pca, label="PCA")
+    plt.plot(r_list, fisher, label="Fisher")
+    plt.plot(r_list, dtw, label="DTW")
+    plt.plot(r_list, lb_dtw, label="Lower-bound DTW")
+
+    plt.hlines(all_feats, xmin=0, xmax=max(r_list), label="No selection")
+
+    plt.title(desc)
+    plt.legend()
+
+    plt.show()
