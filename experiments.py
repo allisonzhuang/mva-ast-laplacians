@@ -1,4 +1,5 @@
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 from matplotlib import pyplot as plt
 
 from data import load_dataset
@@ -32,41 +33,47 @@ class Experiment:
         self.desc += f"; {k = }, {t = }; {type(clf).__name__}"
 
 
-    def extract_scores(self):
+    def extract_scores(self, X, X_f, y):
         self.scores = {}
 
-        self.scores["pca"] = pca_selector(self.X_f)
-        self.scores["fisher"] = fisher_selector(self.X_f, self.y)
+        self.scores["pca"] = pca_selector(X_f)
+        self.scores["fisher"] = fisher_selector(X_f, y)
 
-        y = self.y if self.use_y else None
+        y = y if self.use_y else None
 
-        self.scores["euclidean"] = euclidean_laplacian_score(self.X_f, self.k, self.t, y)
-        self.scores["dtw"] = dtw_laplacian_score(self.X, self.X_f, self.k, self.t, y, f"dtw/{self.pre_dtw_filename}dtw_{self.dataset}.npy")
-        self.scores["lb_dtw"] = lb_dtw_laplacian_score(self.X, self.X_f, self.k, self.t, y, f"dtw/{self.pre_dtw_filename}lb_dtw_{self.dataset}.npy")
+        self.scores["euclidean"] = euclidean_laplacian_score(X_f, self.k, self.t, y)
+        self.scores["dtw"] = dtw_laplacian_score(X, X_f, self.k, self.t, y, f"dtw/{self.pre_dtw_filename}dtw_{self.dataset}_train.npy")
+        self.scores["lb_dtw"] = lb_dtw_laplacian_score(X, X_f, self.k, self.t, y, f"dtw/{self.pre_dtw_filename}lb_dtw_{self.dataset}_train.npy")
 
         print("Scores extracted.")
 
     def run(self, r_list: list[int]):
         self.X, self.y = load_dataset(self.dataset, self.denoise, **self.kwargs)
-        self.X_f = get_features(self.X, **self.kwargs)
+        X_train, X_test, y_train, y_test = train_test_split(self.X, self.y, test_size=0.2, random_state=42, stratify=self.y)
+
+        X_train_f = get_features(X_train, **self.kwargs)
+        X_test_f = get_features(X_test, **self.kwargs)
+
+        scaler = StandardScaler()
+        X_train_f = scaler.fit_transform(X_train_f)
+        X_test_f = scaler.transform(X_test_f)
 
         metrics = {}
 
-        X_train, X_test, y_train, y_test = train_test_split(self.X_f, self.y, test_size=0.2, random_state=42, stratify=self.y)
+        self.clf.fit(X_train_f, y_train)
+        metrics["all_feats"] = self.clf.score(X_test_f, y_test)
 
-        self.clf.fit(X_train, y_train)
-        metrics["all_feats"] = self.clf.score(X_test, y_test)
-
-        self.extract_scores()
+        self.extract_scores(X_train, X_train_f, y_train)
 
         for filter_method, scores in self.scores.items():
             metrics[filter_method] = []
 
             for r in r_list:
-                X_sel, feat_idx = filter_features(X_train, scores, r, return_feat_idx=True)
+                X_sel, feat_idx = filter_features(X_train_f, scores, r, return_feat_idx=True)
+                X_test_sel = X_test_f[:, feat_idx]
 
                 self.clf.fit(X_sel, y_train)
-                metrics[filter_method].append(self.clf.score(X_test[:, feat_idx], y_test))
+                metrics[filter_method].append(self.clf.score(X_test_sel, y_test))
 
         return metrics
 
@@ -82,8 +89,8 @@ def plot_experiment(exp: dict):
     dtw = metrics["dtw"]
     lb_dtw = metrics["lb_dtw"]
 
-    plt.plot(r_list, pca, label="PCA")
-    plt.plot(r_list, fisher, label="Fisher")
+    # plt.plot(r_list, pca, label="PCA")
+    # plt.plot(r_list, fisher, label="Fisher")
     plt.plot(r_list, euclidean, label="Euclidean LS")
     plt.plot(r_list, dtw, label="DTW LS")
     plt.plot(r_list, lb_dtw, label="Lower-bound DTW LS")

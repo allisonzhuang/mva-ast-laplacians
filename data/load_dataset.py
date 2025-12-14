@@ -15,7 +15,7 @@ def denoise_data(signals, n_atoms=50):
     return X_hat
 
 
-def _parse_stocks(data, period=60, pred_days=7, shift_days=1, **kwargs):
+def _parse_stocks(data, period=20, pred_days=5, shift_days=2, **kwargs):
     N = data.size
     series = []
     outcomes = []
@@ -49,18 +49,6 @@ def load_dataset(dataset_name: str, denoise=True, raw=False, **kwargs):
 
         if denoise:
             X = denoise_data(X, 300)
-    elif dataset_name == "microsoft":
-        data = np.genfromtxt(
-            "data/MSFT.csv", delimiter=",", skip_header=1, usecols=[1]
-        )
-
-        X, y = data, None
-
-        if not raw:
-            X, y = _parse_stocks(data, 15, 2, 1)
-
-        if denoise:
-            X = denoise_data(X)
 
     elif dataset_name == "amazon":
         data = np.genfromtxt(
@@ -70,7 +58,7 @@ def load_dataset(dataset_name: str, denoise=True, raw=False, **kwargs):
         X, y = data, None
 
         if not raw:
-            X, y = _parse_stocks(data, 60, 7, 1)
+            X, y = _parse_stocks(data, 40, 5)
 
         if denoise:
             X = denoise_data(X)
