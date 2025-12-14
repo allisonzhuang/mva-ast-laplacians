@@ -1,1 +1,0 @@
-from SimpleMLP import SimpleMLP
