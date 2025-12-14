@@ -78,7 +78,7 @@ class Experiment:
         return metrics
 
 
-def plot_experiment(exp: dict):
+def plot_experiment(ax, exp: dict):
     desc, r_list, metrics = exp["desc"], exp["r_list"], exp["metrics"]
 
     all_feats = metrics["all_feats"]
@@ -89,15 +89,34 @@ def plot_experiment(exp: dict):
     dtw = metrics["dtw"]
     lb_dtw = metrics["lb_dtw"]
 
-    # plt.plot(r_list, pca, label="PCA")
-    # plt.plot(r_list, fisher, label="Fisher")
-    plt.plot(r_list, euclidean, label="Euclidean LS")
-    plt.plot(r_list, dtw, label="DTW LS")
-    plt.plot(r_list, lb_dtw, label="Lower-bound DTW LS")
+    ax.plot(r_list, pca, label="PCA")
+    ax.plot(r_list, fisher, label="Fisher")
+    ax.plot(r_list, euclidean, label="Euclidean LS")
+    ax.plot(r_list, dtw, label="DTW LS")
+    ax.plot(r_list, lb_dtw, label="Lower-bound DTW LS")
 
-    plt.hlines(all_feats, xmin=0, xmax=max(r_list), label="No selection", linestyle='--', color="black")
+    ax.hlines(all_feats, xmin=0, xmax=max(r_list), label="No selection", linestyle='--', color="black")
 
-    plt.title(desc)
-    plt.legend()
+    ax.set_title(desc)
+    ax.set_ylim(0, 1)
+    ax.set_xlabel("Number of Features (r)")
+    ax.set_ylabel("Accuracy")
+    ax.legend()
 
-    plt.show()
+    ax.grid(True, linestyle=':', alpha=0.6)
+
+
+def plot_experiments(experiments: list[dict]):
+    n_exps = len(experiments)
+    shift = n_exps // 4
+
+    for i in range(n_exps // 2):
+        exp_raw = experiments[i]
+        exp_denoised = experiments[i + shift]
+
+        _, axes = plt.subplots(1, 2, figsize=(15, 5), constrained_layout=True)
+
+        plot_experiment(axes[0], exp_raw)
+        plot_experiment(axes[1], exp_denoised)
+
+        plt.show()
