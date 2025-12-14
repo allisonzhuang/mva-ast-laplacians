@@ -35,28 +35,25 @@ def create_graph(distance_matrix: np.ndarray, similarity_matrix: np.ndarray, k: 
     return D, L
 
 
-def laplacian_score(X, distance_matrix, similarity_matrix, k=None):
-    D, L = create_graph(distance_matrix, similarity_matrix, k)
+def laplacian_score(X, distance_matrix, similarity_matrix, k=None, y=None):
+    D, L = create_graph(distance_matrix, similarity_matrix, k, y)
 
     F_mu = (X.T @ D.diagonal()[:, np.newaxis]) / D.sum()
     F_t = X - F_mu.T  # i.e., F-tilde, take outer product with mean vector for mean matrix
 
     # calculate vectorized L_r for all r
-    num_matrix = F_t.T @ L @ F_t
-    num_vector = np.diag(num_matrix)
-
-    denom_matrix = F_t.T @ D @ F_t
-    denom_vector = np.diag(denom_matrix)
+    num_vector = np.sum(F_t * (L @ F_t), axis=0)
+    denom_vector = np.sum(F_t * (D @ F_t), axis=0)
 
     L_r_scores = np.divide(num_vector, denom_vector, out=np.zeros_like(num_vector, dtype=float), where=denom_vector != 0)
-    return L_r_scores
+    return - L_r_scores
 
 
-def euclidean_laplacian_score(X_f, k, t):
+def euclidean_laplacian_score(X_f, k, t, y=None):
     distance_matrix = euclidean_distances(X_f, X_f)
-    similarity_matrix = np.exp(-distance_matrix / t)
+    similarity_matrix = np.exp(-(distance_matrix**2) / t)
 
-    return laplacian_score(X_f, distance_matrix, similarity_matrix, k)
+    return laplacian_score(X_f, distance_matrix, similarity_matrix, k, y)
 
 
 def fisher_laplacian_score(X, X_f, y):
@@ -75,16 +72,16 @@ def fisher_laplacian_score(X, X_f, y):
     return laplacian_score(X_f, distance_matrix, similarity_matrix)
 
 
-def dtw_laplacian_score(X, X_f, k, t, distance_matrix_path="dist_matrix.npy"):
+def dtw_laplacian_score(X, X_f, k, t, y=None, distance_matrix_path="dist_matrix.npy"):
     try:
         distance_matrix = np.load(distance_matrix_path)
     except FileNotFoundError:
         distance_matrix = cdist_dtw(X, n_jobs=4)
         np.save(distance_matrix_path, distance_matrix)
 
-    similarity_matrix = np.exp(-distance_matrix / t)
+    similarity_matrix = np.exp(-(distance_matrix)**2 / t)
 
-    return laplacian_score(X_f, distance_matrix, similarity_matrix, k)
+    return laplacian_score(X_f, distance_matrix, similarity_matrix, k, y)
 
 
 def get_lb_matrix(X, radius):
@@ -105,13 +102,13 @@ def get_lb_matrix(X, radius):
     return np.maximum(lb_matrix, lb_matrix.T)
 
 
-def lb_dtw_laplacian_score(X, X_f, k, t, distance_matrix_path="dist_matrix.npy"):
+def lb_dtw_laplacian_score(X, X_f, k, t, y=None, distance_matrix_path="dist_matrix.npy"):
     try:
         distance_matrix = np.load(distance_matrix_path)
     except FileNotFoundError:
         distance_matrix = get_lb_matrix(X, 30)
         np.save(distance_matrix_path, distance_matrix)
 
-    similarity_matrix = np.exp(-distance_matrix / t)
+    similarity_matrix = np.exp(-(distance_matrix**2) / t)
 
-    return laplacian_score(X_f, distance_matrix, similarity_matrix, k)
+    return laplacian_score(X_f, distance_matrix, similarity_matrix, k, y)

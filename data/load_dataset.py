@@ -1,9 +1,11 @@
 import numpy as np
 from sklearn.decomposition import DictionaryLearning
+from scipy import signal
+from functools import lru_cache
 
 
-def denoise_data(signals, n_atoms=50, sparsity=0.0):
-    dict_learning = DictionaryLearning(n_atoms, alpha=sparsity, max_iter=100)
+def denoise_data(signals, n_atoms=50):
+    dict_learning = DictionaryLearning(n_atoms, max_iter=100)
 
     V = dict_learning.fit_transform(signals)
     D = dict_learning.components_
@@ -30,6 +32,7 @@ def _parse_stocks(data, period=60, pred_days=7, shift_days=1, **kwargs):
     return X, y
 
 
+@lru_cache(maxsize=None)
 def load_dataset(dataset_name: str, denoise=True, raw=False, **kwargs):
     dataset_name = dataset_name.lower()
 
@@ -42,8 +45,10 @@ def load_dataset(dataset_name: str, denoise=True, raw=False, **kwargs):
                 X.shape[0], X.shape[2]
             )  # If we can handle multi-dimensional, remove this
 
+            X = signal.resample(X, 2000, axis=1)
+
         if denoise:
-            X = denoise_data(X, n_atoms=100, sparsity=0.5)
+            X = denoise_data(X, 300)
     elif dataset_name == "microsoft":
         data = np.genfromtxt(
             "data/MSFT.csv", delimiter=",", skip_header=1, usecols=[1]
@@ -52,7 +57,7 @@ def load_dataset(dataset_name: str, denoise=True, raw=False, **kwargs):
         X, y = data, None
 
         if not raw:
-            X, y = _parse_stocks(data, **kwargs)
+            X, y = _parse_stocks(data, 15, 2, 1)
 
         if denoise:
             X = denoise_data(X)
@@ -65,7 +70,7 @@ def load_dataset(dataset_name: str, denoise=True, raw=False, **kwargs):
         X, y = data, None
 
         if not raw:
-            X, y = _parse_stocks(data, **kwargs)
+            X, y = _parse_stocks(data, 60, 7, 1)
 
         if denoise:
             X = denoise_data(X)
